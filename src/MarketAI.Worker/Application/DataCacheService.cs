@@ -1,6 +1,7 @@
 ﻿using MarketAI.Worker.Data;
 using MarketAI.Worker.Integration.Responses;
 using MarketReportAI.AIClient;
+using System.Text.Json;
 
 namespace MarketAI.Worker.Application;
 
@@ -26,25 +27,31 @@ public class DataCacheService
     }
 
 
-    public List<AlphaNewsItem> GetTodaysNewsFor(string symbol)
+    public async Task<List<AlphaNewsItem>> GetTodaysNewsFor(string symbol)
     {
         var name = CreateFileName(symbol);
         var existingFiles = _fileStorage.GetMatchingFileNames(name);
 
-        List<AlphaNewsItem> data = [];
-
         if (existingFiles.Count == 0)
         {
-            var response = _alphaClient.GetNews(symbol);
+            var response = await _alphaClient.GetNews(symbol);
 
-            // save to file and return data
+            // TODO: maybe just save the raw string instead of reserializing it
+            var serialized = JsonSerializer.Serialize(response);
+            _fileStorage.StoreFile(name, serialized);
+
+
+            return response.ToList();
         }
         else
         {
             // load data
+            var fileData = _fileStorage.LoadFile(name);
+            var parsed = JsonSerializer.Deserialize<List<AlphaNewsItem>>(fileData);
+            
+            return parsed?.ToList() ?? [];
         }
 
-        return data;
     }
 
     private string CreateFileName(string symbol)

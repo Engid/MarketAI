@@ -1,4 +1,5 @@
-﻿using MarketReportAI.AIClient;
+﻿using MarketAI.Worker.Application;
+using MarketReportAI.AIClient;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -7,14 +8,14 @@ namespace MarketAI;
 public class BackgroundAgent : BackgroundService
 {
     private readonly ILogger<BackgroundAgent> _logger;
-    private readonly IMarketDataClient _alphaVantageClient;
+    private readonly DataCacheService _dataService;
 
-    public BackgroundAgent(ILogger<BackgroundAgent> logger, IMarketDataClient alphaClient)
+    public BackgroundAgent(ILogger<BackgroundAgent> logger, DataCacheService dataService)
     {
-        ArgumentNullException.ThrowIfNull(alphaClient);
+        ArgumentNullException.ThrowIfNull(dataService);
         ArgumentNullException.ThrowIfNull(logger);
 
-        _alphaVantageClient = alphaClient;
+        _dataService = dataService;
         _logger = logger;
     }
 
@@ -32,8 +33,11 @@ public class BackgroundAgent : BackgroundService
         //    await Task.Delay(1000, stoppingToken);
         //}
 
-        var result = await _alphaVantageClient.GetNews("MSFT");
+        var news = await _dataService.GetTodaysNewsFor("MSFT");
 
-        Console.WriteLine(result);
+        foreach (var s in news)
+        {
+            Console.WriteLine(s.Summary + s.Source);
+        }
     }
 }
