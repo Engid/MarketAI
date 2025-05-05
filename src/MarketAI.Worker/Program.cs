@@ -1,4 +1,6 @@
 ﻿using MarketAI;
+using MarketAI.Worker.Application;
+using MarketAI.Worker.Data;
 using MarketReportAI.AIClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +17,9 @@ builder.Services.AddHttpClient<IMarketDataClient, AlphaVantageClient>(client =>
 {
     client.BaseAddress = new Uri("https://www.alphavantage.co/");
 });
+
+builder.Services.AddTransient<IFileStorage, MarketDataFileStorage>();
+builder.Services.AddTransient<DataCacheService>();
 
 builder.Services.AddHostedService<BackgroundAgent>();
 
