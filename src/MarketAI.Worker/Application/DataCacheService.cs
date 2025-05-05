@@ -58,7 +58,7 @@ public class DataCacheService
     {
         var today = _dateProvider();
 
-        var fileName = $"{symbol}_{today:YYYYMMDD}";
+        var fileName = $"{symbol}_{today:yyyyMMdd}";
 
         return fileName;
     }
