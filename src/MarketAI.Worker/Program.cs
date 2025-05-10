@@ -15,19 +15,7 @@ builder.Services.AddHttpClient<IMarketDataClient, AlphaVantageClient>(client =>
     client.BaseAddress = new Uri("https://www.alphavantage.co/");
 });
 
-
-// this doesn't work? 
-var ai = builder.Configuration.GetSection("OpenAI").Get<OpenAiConfig>();
-
-if (ai == null)
-{
-    throw new Exception("config not available");
-}
-
-//var kernelBuilder = Kernel.CreateBuilder().AddOpenAIChatCompletion(ai.ModelId, ai.ApiKey);
-
-//// I think this registers it too??
-//Kernel kernel = kernelBuilder.Build();
+var ai = builder.Configuration.GetSection("OpenAI").Get<OpenAiConfig>() ?? throw new Exception("AI config required");
 
 builder.Services.AddOpenAIChatCompletion(ai.ModelId, ai.ApiKey);
 builder.Services.AddKernel();
@@ -39,7 +27,6 @@ builder.Services.AddHostedService<BackgroundAgent>();
 
 var host = builder.Build();
 host.Run();
-
 
 
 record OpenAiConfig

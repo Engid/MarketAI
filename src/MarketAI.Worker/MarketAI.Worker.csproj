@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="NewFolder\**" />
+    <EmbeddedResource Remove="NewFolder\**" />
+    <None Remove="NewFolder\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="appsettings.Development.json" />
     <None Remove="appsettings.json" />
   </ItemGroup>
@@ -23,7 +29,6 @@
 
   <ItemGroup>
     <Folder Include="AI\" />
-    <Folder Include="NewFolder\" />
   </ItemGroup>
 
   <ItemGroup>

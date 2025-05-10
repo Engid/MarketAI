@@ -40,8 +40,8 @@ namespace MarketAI.Worker.Integration.Responses
         [JsonPropertyName("overall_sentiment_label")]
         public string OverallSentimentLabel { get; set; } = string.Empty;
 
-        //[JsonPropertyName("ticker_sentiment")]
-        //public List<TickerSentiment> TickerSentiment { get; set; } = new List<TickerSentiment>();
+        [JsonPropertyName("ticker_sentiment")]
+        public List<TickerSentiment> TickerSentiment { get; set; } = new List<TickerSentiment>();
     }
 
     public class Topic

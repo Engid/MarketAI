@@ -1,12 +1,9 @@
 ﻿using MarketAI.Worker.Integration.Responses;
 using Microsoft.Extensions.Configuration;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace MarketReportAI.AIClient;
-
-public record DailyQuote();
 
 public interface IMarketDataClient
 {
@@ -23,29 +20,7 @@ public class AlphaVantageClient : IMarketDataClient
     public AlphaVantageClient(HttpClient http, IConfiguration config)
     {
         _http = http;
-        _apiKey = config["AlphaVantage:ApiKey"];
-    }
-
-    public async Task<DailyQuote[]> GetDailyQuotesAsync(string symbol, DateTime from, DateTime to)
-    {
-        var url = $"query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={_apiKey}&outputsize=full";
-        var json = await _http.GetFromJsonAsync<JsonElement>(url);
-        // parse json["Time Series (Daily)"] into DailyQuote[]
-        return [new()];
-    }
-
-
-    public async Task<DailyQuote?> GetMarketDataAsync(string ticker)
-    {
-        var apiKey = "your_api_key_here"; // Replace with your actual API key
-        var url = $"query?function=TIME_SERIES_DAILY&symbol={ticker}&apikey={apiKey}";
-
-        var response = await _http.GetAsync(url);
-        response.EnsureSuccessStatusCode();
-
-        var data = await response.Content.ReadFromJsonAsync<DailyQuote>();
-
-        return data;
+        _apiKey = config["AlphaVantage:ApiKey"] ?? throw new ArgumentException("AlphaVantage ApiKey required");
     }
 
     public async Task<AlphaNewsItem[]> GetNews(string symbol)
@@ -67,5 +42,17 @@ public class AlphaVantageClient : IMarketDataClient
 
         return Array.Empty<AlphaNewsItem>();
     }
+
+    // TODO:
+    public async Task<DailyQuote[]> GetDailyQuotesAsync(string symbol, DateTime from, DateTime to)
+    {
+        var url = $"query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={_apiKey}&outputsize=full";
+        var json = await _http.GetFromJsonAsync<JsonElement>(url);
+        // parse json["Time Series (Daily)"] into DailyQuote[]
+        return [new()];
+    }
 }
+
+// TODO:
+public record DailyQuote();
 

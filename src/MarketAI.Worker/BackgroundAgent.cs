@@ -17,7 +17,7 @@ public class BackgroundAgent : BackgroundService
     private readonly DataCacheService _dataService;
     private readonly Kernel _aiKernel;
     private readonly IChatCompletionService _chat;
-    //private readonly 
+    private readonly ISerializer yamlSerializer;
     private readonly ILogger<BackgroundAgent> _logger;
 
     public BackgroundAgent(ILogger<BackgroundAgent> logger, 
@@ -35,74 +35,106 @@ public class BackgroundAgent : BackgroundService
         _aiKernel = ai;
         _chat = chat;
         _logger = logger;
+
+        yamlSerializer = new SerializerBuilder()
+            .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .Build();
+
+        // register a tool
+        //_aiKernel.Plugins.AddFromType<SomeTool>("name");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var yamlSerializer = new SerializerBuilder().WithNamingConvention(CamelCaseNamingConvention.Instance).Build();
+        try
+        {
+            await RunAgent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occured while processing");
+        }
+    }
 
-
+    private async Task RunAgent()
+    {
         var settings = new OpenAIPromptExecutionSettings
         {
             FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
         };
 
-        // register a tool
-        //_aiKernel.Plugins.AddFromType<>("name");
-
         var news = await _dataService.GetTodaysNewsFor("MSFT");
-
-        // todo: do some AI
 
         var chatHistory = new ChatHistory();
 
+        string msg;
+        ChatMessageContent result;
 
+        var systemPrompt = """
+            You are a helpful stock market analyst who specializes in making market predictions. 
+            You will be shown a series of news articles summaries and asked to give your thoughts.
+            Each summary includes the headline, a summary, and estimations about the companies market performance. 
+            Keep your responses concise as we will look at many article summaries.
 
+            """;
 
-        //Console.WriteLine(result.GetValue<string>());
+        chatHistory.AddSystemMessage(systemPrompt);
 
-        ChatMessageContent r;
-        var msg = "";
-        var userMsg = "";
-        var respMsg = "";
-        var sb = new StringBuilder();
-
-        foreach (var s in news.Skip(5).Take(10))
+        foreach (var s in news.Take(25))
         {
             var yamlNews = yamlSerializer.Serialize(s);
 
-            msg = $"Think about this market news headline for Microsoft. Write a few lines with your thoughts, then I will show you another headline. \n{yamlNews}";
-            AddUserMessage(msg, chatHistory, sb);
+            msg = $"""
+                Below is an analysis of a news article about Microsoft for today. 
+                Write a few lines with your thoughts about the summary and wheather 
+                you agree or dissagree with the sentiments and explain why. Keep it concise. 
 
-            r = await _chat.GetChatMessageContentAsync(chatHistory, kernel: _aiKernel);
-            AddAgentResponse(r, chatHistory, sb);
+                {yamlNews}
+                """;
+                
+            AddUserMessage(msg, chatHistory);
+
+            result = await _chat.GetChatMessageContentAsync(chatHistory, settings, kernel: _aiKernel);
+            AddAgentResponse(result, chatHistory);
 
             // delay to avoid rate limiting
-            await Task.Delay(1000);
+            await Task.Delay(5000);
         }
 
-        msg = "Now that you've seen the headlines, write a summary with your final thoughts and answer the question: Do you think Microsoft will go up or down tomorrow?";
-        AddUserMessage(msg, chatHistory, sb);
+        msg = """
+            Now that you've seen some summaries of the daily news, write a summary with your final thoughts and answer the question: 
+            Do you think Microsoft's stock price will go up or down tomorrow? Please explain why.
+            """;
 
-        r = await _chat.GetChatMessageContentAsync(chatHistory, kernel: _aiKernel);
-        AddAgentResponse(r, chatHistory, sb);
+        AddUserMessage(msg, chatHistory);
 
-        _dataService.StoreChatHistory(sb.ToString());
+        result = await _chat.GetChatMessageContentAsync(chatHistory, settings, kernel: _aiKernel);
+        AddAgentResponse(result, chatHistory);
+
+        var historyStr = HistoryToString(chatHistory);
+
+        _dataService.StoreChatHistory(historyStr);
     }
 
-    private void AddUserMessage(string msg, ChatHistory chatHistory, StringBuilder sb)
+    private string HistoryToString(ChatHistory chatHistory)
+    {
+        var sb = new StringBuilder();
+        foreach (var item in chatHistory)
+        {
+            sb.AppendLine($"{item.Role}: {item.Content}");
+        }
+        return sb.ToString();
+    }
+
+    private void AddUserMessage(string msg, ChatHistory chatHistory)
     {
         chatHistory.AddUserMessage(msg);
-        var userMsg = $"User: {msg}";
-        sb.AppendLine(userMsg);
-        Console.WriteLine(userMsg);
+        Console.WriteLine($"User: {msg}");
     }
 
-    private void AddAgentResponse(ChatMessageContent r, ChatHistory chatHistory, StringBuilder sb)
+    private void AddAgentResponse(ChatMessageContent r, ChatHistory chatHistory)
     {
         chatHistory.AddMessage(r.Role, r.Content ?? "");
-        var respMsg = $"Agent: {r}";
-        sb.AppendLine(respMsg);
-        Console.WriteLine(respMsg);
+        Console.WriteLine($"Agent: {r}");
     }
 }
