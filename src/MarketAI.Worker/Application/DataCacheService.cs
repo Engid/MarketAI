@@ -51,7 +51,13 @@ public class DataCacheService
             
             return parsed?.ToList() ?? [];
         }
+    }
 
+    public void StoreChatHistory(string chat)
+    {
+        var historyGuid = Guid.NewGuid();
+
+        _fileStorage.StoreFile($"gpt4-1_MSFT_{historyGuid}",  chat);
     }
 
     private string CreateFileName(string symbol)
